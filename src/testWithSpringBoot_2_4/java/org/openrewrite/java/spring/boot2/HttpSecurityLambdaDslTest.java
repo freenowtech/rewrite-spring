@@ -337,4 +337,59 @@ class HttpSecurityLambdaDslTest implements RewriteTest {
           )
         );
     }
+
+    @Test
+    void testDisableWithSessionManagementAndHttpBasic() {
+        rewriteRun(
+          //language=java
+          java(
+            """
+              import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+              import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+              import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+              
+              @EnableWebSecurity
+              public class ConventionalSecurityConfig extends WebSecurityConfigurerAdapter {
+              
+                  @Override
+                  protected void configure(HttpSecurity http) throws Exception {
+                      http.csrf().disable()
+                            .antMatcher("/**")
+                            .sessionManagement()
+                            .sessionCreationPolicy(SessionCreationPolicy.NEVER)
+                            .and()
+                            .authorizeRequests()
+                            .antMatchers("/foo/**").hasAuthority("bar")
+                            .antMatchers("/**").denyAll()
+                            .and()
+                            .httpBasic();
+                  }
+              }
+              """,
+            """
+              import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+              import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+              import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+              
+              @EnableWebSecurity
+              public class ConventionalSecurityConfig extends WebSecurityConfigurerAdapter {
+              
+                  @Override
+                  protected void configure(HttpSecurity http) throws Exception {
+                      http.csrf(AbstractHttpConfigurer::disable)
+                             .securityMatcher("/**")
+                             .sessionManagement(configurer -> configurer.sessionCreationPolicy(SessionCreationPolicy.NEVER))
+                             .authorizeHttpRequests(it -> it
+                                     .requestMatchers("/foo/**").hasAuthority("bar")
+                                     .requestMatchers("/**").denyAll())
+                             .httpBasic(Customizer.withDefaults());
+                  }
+              }
+              """
+          )
+        );
+    }
+
+
+
 }
